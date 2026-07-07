@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>21天打卡挑战</title>
+  <title>7天打卡挑战</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -139,8 +139,38 @@
       box-shadow: 0 2px 6px rgba(255,215,0,0.4);
     }
     .day-cell.locked { opacity: 0.4; cursor: not-allowed; }
-    .day-num { font-size: 13px; }
+    .day-num { font-size: 16px; }
     .day-label { font-size: 9px; opacity: 0.7; margin-top: 2px; }
+
+    /* Check-in Button */
+    .checkin-section {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .checkin-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #FF6B35, #F7931E);
+      color: #fff;
+      border: none;
+      border-radius: 16px;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 6px 20px rgba(255,107,53,0.35);
+      letter-spacing: 2px;
+    }
+    .checkin-btn:active { transform: scale(0.97); }
+    .checkin-btn:disabled {
+      background: #ccc;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+    .checkin-btn.done {
+      background: linear-gradient(135deg, #4CAF50, #81C784);
+      box-shadow: 0 6px 20px rgba(76,175,80,0.35);
+    }
 
     @keyframes pulse {
       0%, 100% { transform: scale(1); }
@@ -245,6 +275,22 @@
     @keyframes modalIn {
       from { opacity: 0; transform: scale(0.8) translateY(20px); }
       to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    /* Phone Bind Modal */
+    .phone-modal-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+    .phone-modal-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .phone-modal-desc {
+      font-size: 13px;
+      color: #999;
+      margin-bottom: 20px;
     }
 
     /* Lottery Wheel */
@@ -381,6 +427,11 @@
       box-shadow: 0 4px 16px rgba(255,107,53,0.3);
     }
     .btn-primary:active { transform: scale(0.97); }
+    .btn-primary:disabled {
+      background: #ccc;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
     .btn-secondary {
       width: 100%;
       padding: 12px;
@@ -434,13 +485,44 @@
       0% { opacity: 1; transform: translateY(-20px) rotate(0deg); }
       100% { opacity: 0; transform: translateY(100vh) rotate(720deg); }
     }
+
+    /* Loading */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,0.9);
+      z-index: 3000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .loading-overlay.hidden { display: none; }
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid #f0f0f0;
+      border-top-color: #FF6B35;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
+  <!-- Loading -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <span style="font-size: 14px; color: #999;">加载中...</span>
+  </div>
+
   <div class="container">
     <!-- Header -->
     <div class="header">
-      <h1>🔥 21天打卡挑战</h1>
+      <h1>🔥 7天打卡挑战</h1>
       <p>坚持每天签到，解锁专属奖励</p>
     </div>
 
@@ -448,18 +530,23 @@
     <div class="progress-card">
       <div class="progress-label">
         <span>打卡进度</span>
-        <span><strong id="dayCount">0</strong> / 21 天</span>
+        <span><strong id="dayCount">0</strong> / 7 天</span>
       </div>
       <div class="progress-bar">
         <div class="progress-fill" id="progressFill" style="width: 0%"></div>
       </div>
-      <div class="streak-info" id="streakInfo">坚持打卡，每天进步一点点！</div>
+      <div class="streak-info" id="streakInfo">加载中...</div>
     </div>
 
     <!-- Calendar -->
     <div class="calendar-card">
       <div class="calendar-title">📅 打卡日历</div>
       <div class="calendar-grid" id="calendarGrid"></div>
+    </div>
+
+    <!-- Check-in Button -->
+    <div class="checkin-section">
+      <button class="checkin-btn" id="checkinBtn" onclick="handleCheckIn()">今日签到</button>
     </div>
 
     <!-- Rewards Preview -->
@@ -472,13 +559,26 @@
     <div class="rules-card">
       <div class="rules-title">📋 活动规则</div>
       <ul>
-        <li>活动期间，每天可签到1次</li>
+        <li>活动期间，每人每天仅可签到1次（同一手机号换设备也无法重复签到）</li>
         <li>连续打卡至指定天数，即可参与抽奖获得对应奖励</li>
         <li>中奖后请在24小时内填写收货信息，逾期视为放弃</li>
         <li>每人每个奖励仅可领取1次</li>
         <li>奖品将在活动结束后7个工作日内发放</li>
         <li>本活动最终解释权归平台所有</li>
       </ul>
+    </div>
+  </div>
+
+  <!-- Phone Bind Modal (first visit) -->
+  <div class="modal-overlay" id="phoneModal">
+    <div class="modal-content">
+      <div class="phone-modal-icon">📱</div>
+      <div class="phone-modal-title">绑定手机号</div>
+      <div class="phone-modal-desc">首次参与需绑定手机号，用于签到记录和奖品发放</div>
+      <div class="form-group">
+        <input type="tel" id="bindPhone" placeholder="请输入手机号" maxlength="11">
+      </div>
+      <button class="btn-primary" id="bindBtn" onclick="bindPhone()">确认绑定</button>
     </div>
   </div>
 
@@ -530,13 +630,12 @@
 
   <script>
     // ============ Configuration ============
+    const TOTAL_DAYS = 7;
+
     const REWARDS = [
-      { day: 3,  name: '7天VIP体验卡',  desc: '全站题库无限刷', icon: '🎫' },
-      { day: 7,  name: '题库优惠券5元',  desc: '购买题库立减5元', icon: '💰' },
-      { day: 12, name: '名师直播课名额',  desc: '专属直播课席位1个', icon: '🎓' },
-      { day: 16, name: '实体教材一本',    desc: '精编教材包邮到家', icon: '📚' },
-      { day: 18, name: '30天VIP会员',    desc: '全站畅学一个月', icon: '👑' },
-      { day: 21, name: '神秘大礼包',      desc: '价值299元惊喜好礼', icon: '🎁' },
+      { day: 3, name: '7天VIP体验卡',  desc: '全站题库无限刷', icon: '🎫' },
+      { day: 5, name: '题库优惠券5元',  desc: '购买题库立减5元', icon: '💰' },
+      { day: 7, name: '神秘大礼包',      desc: '价值299元惊喜好礼', icon: '🎁' },
     ];
 
     const PRIZE_POOL = [
@@ -545,35 +644,84 @@
     ];
     const PRIZE_COLORS = ['#FF6B35', '#F7931E', '#FFD700', '#4CAF50', '#2196F3', '#9C27B0'];
 
-    // ============ State ============
-    let checkedDays = JSON.parse(localStorage.getItem('checkedDays') || '[]');
+    // ============ State (all server-driven) ============
+    let userPhone = localStorage.getItem('checkin_phone') || '';
+    let checkedDates = [];     // 从服务端获取的签到日期列表
+    let totalDays = 0;         // 总签到天数
+    let consecutiveDays = 0;   // 连续签到天数
     let claimedRewards = JSON.parse(localStorage.getItem('claimedRewards') || '[]');
     let currentRewardDay = null;
     let isSpinning = false;
+    let checkedInToday = false;
 
     // ============ Init ============
-    function init() {
+    async function init() {
+      if (!userPhone) {
+        // 首次访问，弹出手机号绑定
+        document.getElementById('loadingOverlay').classList.add('hidden');
+        document.getElementById('phoneModal').classList.add('active');
+        return;
+      }
+
+      // 从服务端加载签到数据
+      await loadCheckinData();
+      document.getElementById('loadingOverlay').classList.add('hidden');
       renderCalendar();
       renderRewards();
       updateProgress();
+      updateCheckinButton();
+    }
+
+    // ============ Phone Bind ============
+    function bindPhone() {
+      const phone = document.getElementById('bindPhone').value.trim();
+      if (!/^1[3-9]\d{9}$/.test(phone)) {
+        showToast('请输入正确的手机号');
+        return;
+      }
+      userPhone = phone;
+      localStorage.setItem('checkin_phone', phone);
+      document.getElementById('phoneModal').classList.remove('active');
+      document.getElementById('loadingOverlay').classList.remove('hidden');
+      init(); // 重新初始化
+    }
+
+    // ============ Load Data from Server ============
+    async function loadCheckinData() {
+      try {
+        const res = await fetch(`/api/check-in?phone=${encodeURIComponent(userPhone)}`);
+        const data = await res.json();
+        if (data.success) {
+          checkedDates = data.checkin_dates || [];
+          totalDays = data.total_days || 0;
+          consecutiveDays = data.consecutive_days || 0;
+
+          // 判断今天是否已签到
+          const today = new Date().toISOString().slice(0, 10);
+          checkedInToday = checkedDates.includes(today);
+        }
+      } catch (e) {
+        console.error('加载签到数据失败:', e);
+        showToast('加载数据失败，请刷新重试');
+      }
     }
 
     // ============ Calendar ============
     function renderCalendar() {
       const grid = document.getElementById('calendarGrid');
       grid.innerHTML = '';
-      for (let i = 1; i <= 21; i++) {
+      for (let i = 1; i <= TOTAL_DAYS; i++) {
         const cell = document.createElement('div');
         cell.className = 'day-cell';
         const isRewardDay = REWARDS.some(r => r.day === i);
-        const isChecked = checkedDays.includes(i);
-        const nextDay = checkedDays.length > 0 ? Math.max(...checkedDays) + 1 : 1;
-        const isToday = i === nextDay && !isChecked;
-        const isLocked = i > nextDay;
+        const isChecked = i <= totalDays;
+        const isNextDay = totalDays + 1;
+        const isToday = i === isNextDay && !checkedInToday;
+        const isLocked = i > isNextDay || (i === isNextDay && checkedInToday);
 
         if (isChecked) cell.classList.add('checked');
         if (isToday) cell.classList.add('today');
-        if (isLocked) cell.classList.add('locked');
+        if (isLocked && !isChecked) cell.classList.add('locked');
         if (isRewardDay) cell.classList.add('reward-day');
 
         cell.innerHTML = `
@@ -581,47 +729,100 @@
           <span class="day-label">${isRewardDay ? '奖励' : '天'}</span>
           ${isRewardDay ? '<div class="reward-badge">🎁</div>' : ''}
         `;
-
-        if (isToday) {
-          cell.onclick = () => handleCheckIn(i);
-        }
         grid.appendChild(cell);
       }
     }
 
     // ============ Check-in ============
-    function handleCheckIn(day) {
-      if (checkedDays.includes(day)) {
-        showToast('今天已经签到过啦！');
+    async function handleCheckIn() {
+      if (!userPhone) {
+        document.getElementById('phoneModal').classList.add('active');
         return;
       }
-      checkedDays.push(day);
-      localStorage.setItem('checkedDays', JSON.stringify(checkedDays));
-      renderCalendar();
-      updateProgress();
-      showToast('✅ 签到成功！');
 
-      const reward = REWARDS.find(r => r.day === day);
-      if (reward && !claimedRewards.includes(day)) {
-        setTimeout(() => openLottery(reward), 800);
+      if (checkedInToday) {
+        showToast('今天已经签到过啦！明天再来吧');
+        return;
+      }
+
+      const btn = document.getElementById('checkinBtn');
+      btn.textContent = '签到中...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/check-in', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: userPhone }),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          // 签到成功
+          checkedInToday = true;
+          totalDays = data.total_days;
+          consecutiveDays = data.consecutive_days;
+          checkedDates = data.checkin_dates;
+
+          renderCalendar();
+          updateProgress();
+          updateCheckinButton();
+          showToast('✅ 签到成功！');
+
+          // 检查是否触发奖励
+          const reward = REWARDS.find(r => r.day === totalDays);
+          if (reward && !claimedRewards.includes(totalDays)) {
+            setTimeout(() => openLottery(reward), 800);
+          }
+        } else if (data.already_checked_in) {
+          checkedInToday = true;
+          totalDays = data.total_days;
+          consecutiveDays = data.consecutive_days;
+          updateCheckinButton();
+          showToast('今天已经签到过啦！');
+        } else {
+          showToast(data.error || '签到失败');
+          btn.textContent = '今日签到';
+          btn.disabled = false;
+        }
+      } catch (e) {
+        console.error('签到请求失败:', e);
+        showToast('网络异常，请稍后重试');
+        btn.textContent = '今日签到';
+        btn.disabled = false;
+      }
+    }
+
+    // ============ Check-in Button State ============
+    function updateCheckinButton() {
+      const btn = document.getElementById('checkinBtn');
+      if (checkedInToday) {
+        btn.textContent = '✅ 今日已签到';
+        btn.classList.add('done');
+        btn.disabled = true;
+      } else if (totalDays >= TOTAL_DAYS) {
+        btn.textContent = '🏆 活动已完成';
+        btn.disabled = true;
+      } else {
+        btn.textContent = '今日签到';
+        btn.disabled = false;
       }
     }
 
     // ============ Progress ============
     function updateProgress() {
-      const count = checkedDays.length;
-      document.getElementById('dayCount').textContent = count;
-      document.getElementById('progressFill').style.width = `${(count / 21) * 100}%`;
-      if (count === 0) {
-        document.getElementById('streakInfo').textContent = '点击下方日历开始你的打卡之旅！';
-      } else if (count < 7) {
-        document.getElementById('streakInfo').textContent = `已打卡${count}天，继续加油！`;
-      } else if (count < 14) {
-        document.getElementById('streakInfo').textContent = `太棒了！已坚持${count}天！`;
-      } else if (count < 21) {
-        document.getElementById('streakInfo').textContent = `离目标只差${21 - count}天了，冲！`;
+      document.getElementById('dayCount').textContent = totalDays;
+      document.getElementById('progressFill').style.width = `${(totalDays / TOTAL_DAYS) * 100}%`;
+      if (totalDays === 0) {
+        document.getElementById('streakInfo').textContent = '点击下方按钮开始你的打卡之旅！';
+      } else if (totalDays < 3) {
+        document.getElementById('streakInfo').textContent = `已打卡${totalDays}天，第3天有奖励等你拿！`;
+      } else if (totalDays < 5) {
+        document.getElementById('streakInfo').textContent = `连续${consecutiveDays}天！距第5天奖励还差${5 - totalDays}天`;
+      } else if (totalDays < 7) {
+        document.getElementById('streakInfo').textContent = `太棒了！再坚持${7 - totalDays}天拿终极大奖！`;
       } else {
-        document.getElementById('streakInfo').textContent = '🏆 21天全部达成！你是最棒的！';
+        document.getElementById('streakInfo').textContent = '🏆 7天全部达成！你是最棒的！';
       }
     }
 
@@ -695,6 +896,8 @@
       document.getElementById('prizeName').textContent = prizeName;
       const reward = REWARDS.find(r => r.name === prizeName);
       document.getElementById('prizeDesc').textContent = reward ? reward.desc : '';
+      // 预填手机号
+      document.getElementById('inputPhone').value = userPhone;
       document.getElementById('prizeModal').classList.add('active');
     }
 
@@ -728,13 +931,7 @@
         timestamp: new Date().toISOString(),
       };
 
-      // Store locally as backup
-      let submissions = JSON.parse(localStorage.getItem('submissions') || '[]');
-      submissions.push(record);
-      localStorage.setItem('submissions', JSON.stringify(submissions));
-
       try {
-        // POST to Vercel Serverless Function
         const res = await fetch('/api/submit-reward', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -747,7 +944,6 @@
           throw new Error(result.error || '提交失败');
         }
 
-        // Mark reward as claimed
         claimedRewards.push(currentRewardDay);
         localStorage.setItem('claimedRewards', JSON.stringify(claimedRewards));
 
@@ -761,12 +957,7 @@
         console.error('提交失败:', error);
         btn.textContent = '提交领取';
         btn.disabled = false;
-        // Data saved locally, user can retry later
-        claimedRewards.push(currentRewardDay);
-        localStorage.setItem('claimedRewards', JSON.stringify(claimedRewards));
-        closePrizeModal();
-        renderRewards();
-        showToast('已保存，网络恢复后自动同步');
+        showToast('提交失败，请稍后重试');
       }
     }
 
