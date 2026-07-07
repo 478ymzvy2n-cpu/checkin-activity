@@ -632,17 +632,59 @@
     // ============ Configuration ============
     const TOTAL_DAYS = 7;
 
+    // 每个节点的独立抽奖池和概率
+    const DAY_POOLS = {
+      3: {
+        spins: 1,
+        prizes: [
+          { name: '草稿纸',         icon: '📝', prob: 0.8 },
+          { name: '一拖三数据线',    icon: '🔌', prob: 0.5 },
+          { name: '华图在线7天会员', icon: '🎫', prob: 98.7 },
+        ],
+      },
+      5: {
+        spins: 1,
+        prizes: [
+          { name: '云小鲤毛绒公仔',  icon: '🧸', prob: 0.3 },
+          { name: '镭射挎包',        icon: '👜', prob: 0.5 },
+          { name: '草稿纸',           icon: '📝', prob: 0.5 },
+          { name: '一拖三数据线',     icon: '🔌', prob: 0.3 },
+          { name: '华图在线7天会员',  icon: '🎫', prob: 98.4 },
+        ],
+      },
+      7: {
+        spins: 2,  // 全勤奖励：2次机会
+        prizes: [
+          { name: '云小鲤盲盒',      icon: '🎲', prob: 0.1 },
+          { name: '云小鲤毛绒公仔',  icon: '🧸', prob: 0.2 },
+          { name: '镭射挎包',        icon: '👜', prob: 0.3 },
+          { name: '草稿纸',           icon: '📝', prob: 0.4 },
+          { name: '一拖三数据线',     icon: '🔌', prob: 0.2 },
+          { name: '华图在线7天会员',  icon: '🎫', prob: 98.8 },
+        ],
+      },
+    };
+
+    // 奖励节点展示（用于奖励一览列表）
     const REWARDS = [
-      { day: 3, name: '7天VIP体验卡',  desc: '全站题库无限刷', icon: '🎫' },
-      { day: 5, name: '题库优惠券5元',  desc: '购买题库立减5元', icon: '💰' },
-      { day: 7, name: '神秘大礼包',      desc: '价值299元惊喜好礼', icon: '🎁' },
+      { day: 3, name: 'Day3 抽奖', desc: '草稿纸/数据线/7天会员', icon: '🎰' },
+      { day: 5, name: 'Day5 抽奖', desc: '公仔/挎包/草稿纸/数据线/7天会员', icon: '🎰' },
+      { day: 7, name: 'Day7 抽奖×2', desc: '全勤奖励！盲盒/公仔/挎包等', icon: '🏆' },
     ];
 
-    const PRIZE_POOL = [
-      '7天VIP体验卡', '题库优惠券5元', '名师直播课名额',
-      '实体教材一本', '30天VIP会员', '神秘大礼包'
-    ];
+    // 用于转盘展示的颜色
     const PRIZE_COLORS = ['#FF6B35', '#F7931E', '#FFD700', '#4CAF50', '#2196F3', '#9C27B0'];
+
+    // 加权随机抽奖
+    function weightedRandom(prizes) {
+      const totalProb = prizes.reduce((sum, p) => sum + p.prob, 0);
+      let random = Math.random() * totalProb;
+      for (const prize of prizes) {
+        random -= prize.prob;
+        if (random <= 0) return prize;
+      }
+      return prizes[prizes.length - 1]; // 兜底
+    }
 
     // ============ State (all server-driven) ============
     let userPhone = localStorage.getItem('checkin_phone') || '';
@@ -770,9 +812,8 @@
           showToast('✅ 签到成功！');
 
           // 检查是否触发奖励
-          const reward = REWARDS.find(r => r.day === totalDays);
-          if (reward && !claimedRewards.includes(totalDays)) {
-            setTimeout(() => openLottery(reward), 800);
+          if (DAY_POOLS[totalDays] && !claimedRewards.includes(totalDays)) {
+            setTimeout(() => openLottery(totalDays), 800);
           }
         } else if (data.already_checked_in) {
           checkedInToday = true;
@@ -846,17 +887,35 @@
     }
 
     // ============ Lottery Wheel ============
-    function openLottery(reward) {
-      currentRewardDay = reward.day;
-      document.getElementById('rewardDay').textContent = reward.day;
+    let remainingSpins = 0;  // 剩余抽奖次数
+    let day7Results = [];    // Day7 多次抽奖结果
+
+    function openLottery(rewardDay) {
+      currentRewardDay = rewardDay;
+      const pool = DAY_POOLS[rewardDay];
+      if (!pool) return;
+
+      remainingSpins = pool.spins;
+      day7Results = [];
+
+      document.getElementById('rewardDay').textContent = rewardDay;
+      // Day7 显示额外提示
+      const subtitle = document.querySelector('#lotteryModal p');
+      if (rewardDay === 7) {
+        subtitle.innerHTML = `全勤奖励！你有 <strong style="color:#FF6B35">2次</strong> 抽奖机会`;
+      } else {
+        subtitle.innerHTML = `第 <span id="rewardDay">${rewardDay}</span> 天奖励已就绪`;
+      }
+
       document.getElementById('lotteryModal').classList.add('active');
-      buildWheel();
+      buildWheel(pool.prizes);
     }
 
-    function buildWheel() {
+    function buildWheel(prizes) {
       const wheel = document.getElementById('wheel');
+      wheel.style.transform = 'rotate(0deg)'; // 重置
       wheel.innerHTML = '';
-      const segments = PRIZE_POOL.length;
+      const segments = prizes.length;
       const anglePerSegment = 360 / segments;
 
       for (let i = 0; i < segments; i++) {
@@ -865,38 +924,78 @@
         const startAngle = i * anglePerSegment;
         seg.style.background = PRIZE_COLORS[i % PRIZE_COLORS.length];
         seg.style.transform = `rotate(${startAngle}deg) skewY(${-(90 - anglePerSegment)}deg)`;
-        seg.innerHTML = `<span>${PRIZE_POOL[i]}</span>`;
+        seg.innerHTML = `<span>${prizes[i].name}</span>`;
         wheel.appendChild(seg);
       }
     }
 
     document.getElementById('spinBtn').onclick = function() {
-      if (isSpinning) return;
+      if (isSpinning || remainingSpins <= 0) return;
       isSpinning = true;
 
-      const wheel = document.getElementById('wheel');
-      const segments = PRIZE_POOL.length;
+      const pool = DAY_POOLS[currentRewardDay];
+      const prizes = pool.prizes;
+      const segments = prizes.length;
       const anglePerSegment = 360 / segments;
-      const targetIndex = Math.floor(Math.random() * segments);
+
+      // 加权随机选出中奖
+      const winner = weightedRandom(prizes);
+      const targetIndex = prizes.indexOf(winner);
       const targetAngle = 360 - (targetIndex * anglePerSegment + anglePerSegment / 2);
       const totalRotation = 360 * 5 + targetAngle;
 
+      const wheel = document.getElementById('wheel');
       wheel.style.transform = `rotate(${totalRotation}deg)`;
+
+      remainingSpins--;
 
       setTimeout(() => {
         isSpinning = false;
-        document.getElementById('lotteryModal').classList.remove('active');
-        showPrizeResult(PRIZE_POOL[targetIndex]);
+
+        if (remainingSpins > 0) {
+          // 还有剩余次数（Day7 第1次抽完）
+          day7Results.push(winner);
+          showToast(`第1次抽中：${winner.name}！还剩${remainingSpins}次`);
+          // 重置转盘再抽
+          setTimeout(() => {
+            wheel.style.transition = 'none';
+            wheel.style.transform = 'rotate(0deg)';
+            setTimeout(() => {
+              wheel.style.transition = 'transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)';
+            }, 50);
+          }, 500);
+        } else {
+          // 所有抽奖完成
+          document.getElementById('lotteryModal').classList.remove('active');
+
+          if (day7Results.length > 0) {
+            // Day7 多次抽奖，展示所有结果（取最好的）
+            // 优先展示实物奖品，如果全是会员则展示会员
+            const physicalPrizes = day7Results.filter(p => p.name !== '华图在线7天会员');
+            const bestPrize = physicalPrizes.length > 0 ? physicalPrizes[0] : day7Results[0];
+            showPrizeResult(bestPrize, day7Results);
+          } else {
+            showPrizeResult(winner);
+          }
+        }
       }, 4500);
     };
 
     // ============ Prize Result ============
-    function showPrizeResult(prizeName) {
+    function showPrizeResult(prize, allResults) {
       launchConfetti();
-      document.getElementById('prizeName').textContent = prizeName;
-      const reward = REWARDS.find(r => r.name === prizeName);
-      document.getElementById('prizeDesc').textContent = reward ? reward.desc : '';
-      // 预填手机号
+      const name = typeof prize === 'string' ? prize : prize.name;
+      document.getElementById('prizeName').textContent = name;
+
+      // 如果有多次抽奖结果，显示提示
+      if (allResults && allResults.length > 0) {
+        const names = allResults.map(r => r.name).join('、');
+        document.getElementById('prizeDesc').textContent = `2次抽奖获得：${names}，为你领取最优奖品`;
+      } else {
+        const desc = typeof prize === 'string' ? '' : (prize.desc || '');
+        document.getElementById('prizeDesc').textContent = desc;
+      }
+
       document.getElementById('inputPhone').value = userPhone;
       document.getElementById('prizeModal').classList.add('active');
     }
