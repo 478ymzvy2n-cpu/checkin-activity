@@ -1,6 +1,13 @@
 {
   "name": "checkin-activity",
-  "version": "1.0.0",
-  "description": "21天打卡挑战活动 - Vercel 部署",
-  "private": true
+  "version": "1.1.0",
+  "description": "7天打卡挑战活动",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  }
 }
