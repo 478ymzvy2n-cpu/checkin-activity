@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>21天打卡挑战</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+      background: linear-gradient(135deg, #FF6B35 0%, #F7931E 50%, #FFD700 100%);
+      min-height: 100vh;
+      padding: 20px 16px 40px;
+      color: #333;
+    }
+    .container { max-width: 420px; margin: 0 auto; }
+
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 24px 16px 20px;
+      color: #fff;
+    }
+    .header h1 {
+      font-size: 28px;
+      font-weight: 800;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      margin-bottom: 8px;
+      letter-spacing: 2px;
+    }
+    .header p { font-size: 14px; opacity: 0.9; }
+
+    /* Progress Card */
+    .progress-card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+    }
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+    .progress-label strong { color: #FF6B35; font-size: 18px; }
+    .progress-bar {
+      height: 12px;
+      background: #f0f0f0;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #FF6B35, #FFD700);
+      border-radius: 6px;
+      transition: width 0.6s ease;
+    }
+    .streak-info {
+      margin-top: 12px;
+      font-size: 12px;
+      color: #999;
+      text-align: center;
+    }
+
+    /* Calendar Grid */
+    .calendar-card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+    }
+    .calendar-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+    }
+    .day-cell {
+      aspect-ratio: 1;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 2px solid #f0f0f0;
+      background: #fafafa;
+      position: relative;
+    }
+    .day-cell.today {
+      border-color: #FF6B35;
+      background: #FFF5F0;
+      animation: pulse 2s infinite;
+    }
+    .day-cell.checked {
+      background: linear-gradient(135deg, #FF6B35, #F7931E);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 4px 12px rgba(255,107,53,0.3);
+    }
+    .day-cell.checked::after {
+      content: '✓';
+      font-size: 10px;
+      position: absolute;
+      top: 3px;
+      right: 5px;
+      opacity: 0.8;
+    }
+    .day-cell.reward-day {
+      border-color: #FFD700;
+    }
+    .day-cell.reward-day .reward-badge {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      width: 18px;
+      height: 18px;
+      background: #FFD700;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      box-shadow: 0 2px 6px rgba(255,215,0,0.4);
+    }
+    .day-cell.locked { opacity: 0.4; cursor: not-allowed; }
+    .day-num { font-size: 13px; }
+    .day-label { font-size: 9px; opacity: 0.7; margin-top: 2px; }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+    }
+
+    /* Reward Preview */
+    .rewards-card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+    }
+    .rewards-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+    .reward-list { display: flex; flex-direction: column; gap: 10px; }
+    .reward-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: #FFF9F0;
+      border-radius: 12px;
+      border: 1px solid #FFE4C4;
+    }
+    .reward-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #FF6B35, #FFD700);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .reward-text h4 { font-size: 14px; color: #333; }
+    .reward-text p { font-size: 11px; color: #999; margin-top: 2px; }
+    .reward-item.claimed {
+      background: #F0FFF0;
+      border-color: #C8E6C9;
+    }
+    .reward-item.claimed .reward-icon {
+      background: linear-gradient(135deg, #4CAF50, #81C784);
+    }
+
+    /* Rules */
+    .rules-card {
+      background: rgba(255,255,255,0.9);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .rules-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: #FF6B35;
+    }
+    .rules-card ul { list-style: none; padding: 0; }
+    .rules-card li {
+      font-size: 12px;
+      color: #666;
+      line-height: 1.8;
+      padding-left: 16px;
+      position: relative;
+    }
+    .rules-card li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: #FF6B35;
+      font-weight: bold;
+    }
+
+    /* Modal Overlay */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      backdrop-filter: blur(4px);
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-content {
+      background: #fff;
+      border-radius: 24px;
+      padding: 28px 24px;
+      max-width: 360px;
+      width: 100%;
+      text-align: center;
+      animation: modalIn 0.4s ease;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.8) translateY(20px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    /* Lottery Wheel */
+    .wheel-container {
+      position: relative;
+      width: 240px;
+      height: 240px;
+      margin: 0 auto 20px;
+    }
+    .wheel {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      position: relative;
+      overflow: hidden;
+      border: 6px solid #FFD700;
+      box-shadow: 0 0 20px rgba(255,215,0,0.3);
+      transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+    }
+    .wheel-segment {
+      position: absolute;
+      width: 50%;
+      height: 50%;
+      transform-origin: 100% 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wheel-segment span {
+      font-size: 11px;
+      font-weight: 600;
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      transform: rotate(22.5deg);
+      position: relative;
+      left: -10px;
+      top: -10px;
+    }
+    .wheel-pointer {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 12px solid transparent;
+      border-right: 12px solid transparent;
+      border-top: 20px solid #FF6B35;
+      z-index: 10;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    }
+    .wheel-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #FF6B35, #FFD700);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      z-index: 10;
+      box-shadow: 0 4px 12px rgba(255,107,53,0.4);
+    }
+    .wheel-center:active { transform: translate(-50%, -50%) scale(0.95); }
+
+    /* Prize Result */
+    .prize-result {
+      padding: 16px;
+      background: linear-gradient(135deg, #FFF9F0, #FFE4C4);
+      border-radius: 16px;
+      margin: 16px 0;
+    }
+    .prize-result h3 {
+      font-size: 18px;
+      color: #FF6B35;
+      margin-bottom: 4px;
+    }
+    .prize-result p { font-size: 13px; color: #666; }
+
+    /* Form */
+    .form-group {
+      margin-bottom: 14px;
+      text-align: left;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 6px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #e8e8e8;
+      border-radius: 12px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    .form-group input:focus { border-color: #FF6B35; }
+    .form-group textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #e8e8e8;
+      border-radius: 12px;
+      font-size: 14px;
+      outline: none;
+      resize: none;
+      height: 80px;
+      transition: border-color 0.3s;
+    }
+    .form-group textarea:focus { border-color: #FF6B35; }
+
+    /* Buttons */
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #FF6B35, #F7931E);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 16px rgba(255,107,53,0.3);
+    }
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-secondary {
+      width: 100%;
+      padding: 12px;
+      background: #f5f5f5;
+      color: #666;
+      border: none;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.8);
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      padding: 16px 28px;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 2000;
+      opacity: 0;
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    /* Confetti */
+    .confetti-container {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1500;
+      overflow: hidden;
+    }
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      opacity: 0;
+    }
+    @keyframes confetti-fall {
+      0% { opacity: 1; transform: translateY(-20px) rotate(0deg); }
+      100% { opacity: 0; transform: translateY(100vh) rotate(720deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🔥 21天打卡挑战</h1>
+      <p>坚持每天签到，解锁专属奖励</p>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-card">
+      <div class="progress-label">
+        <span>打卡进度</span>
+        <span><strong id="dayCount">0</strong> / 21 天</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+      </div>
+      <div class="streak-info" id="streakInfo">坚持打卡，每天进步一点点！</div>
+    </div>
+
+    <!-- Calendar -->
+    <div class="calendar-card">
+      <div class="calendar-title">📅 打卡日历</div>
+      <div class="calendar-grid" id="calendarGrid"></div>
+    </div>
+
+    <!-- Rewards Preview -->
+    <div class="rewards-card">
+      <div class="rewards-title">🎁 奖励一览</div>
+      <div class="reward-list" id="rewardList"></div>
+    </div>
+
+    <!-- Rules -->
+    <div class="rules-card">
+      <div class="rules-title">📋 活动规则</div>
+      <ul>
+        <li>活动期间，每天可签到1次</li>
+        <li>连续打卡至指定天数，即可参与抽奖获得对应奖励</li>
+        <li>中奖后请在24小时内填写收货信息，逾期视为放弃</li>
+        <li>每人每个奖励仅可领取1次</li>
+        <li>奖品将在活动结束后7个工作日内发放</li>
+        <li>本活动最终解释权归平台所有</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Lottery Modal -->
+  <div class="modal-overlay" id="lotteryModal">
+    <div class="modal-content">
+      <h2 style="font-size: 20px; margin-bottom: 6px;">🎉 恭喜解锁奖励！</h2>
+      <p style="font-size: 13px; color: #666; margin-bottom: 16px;">第 <span id="rewardDay">3</span> 天奖励已就绪</p>
+      <div class="wheel-container">
+        <div class="wheel-pointer"></div>
+        <div class="wheel" id="wheel"></div>
+        <div class="wheel-center" id="spinBtn">抽奖</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prize Result Modal -->
+  <div class="modal-overlay" id="prizeModal">
+    <div class="modal-content">
+      <div style="font-size: 48px; margin-bottom: 12px;">🎊</div>
+      <h2 style="font-size: 22px; color: #FF6B35;">恭喜中奖！</h2>
+      <div class="prize-result">
+        <h3 id="prizeName"></h3>
+        <p id="prizeDesc"></p>
+      </div>
+      <p style="font-size: 13px; color: #666; margin-bottom: 16px;">请填写收货信息以领取奖品</p>
+      <div class="form-group">
+        <label>姓名</label>
+        <input type="text" id="inputName" placeholder="请输入真实姓名">
+      </div>
+      <div class="form-group">
+        <label>手机号</label>
+        <input type="tel" id="inputPhone" placeholder="请输入手机号" maxlength="11">
+      </div>
+      <div class="form-group">
+        <label>收货地址</label>
+        <textarea id="inputAddress" placeholder="请输入详细收货地址"></textarea>
+      </div>
+      <button class="btn-primary" id="submitBtn" onclick="submitForm()">提交领取</button>
+      <button class="btn-secondary" onclick="closePrizeModal()">稍后填写</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Confetti Container -->
+  <div class="confetti-container" id="confettiContainer"></div>
+
+  <script>
+    // ============ Configuration ============
+    const REWARDS = [
+      { day: 3,  name: '7天VIP体验卡',  desc: '全站题库无限刷', icon: '🎫' },
+      { day: 7,  name: '题库优惠券5元',  desc: '购买题库立减5元', icon: '💰' },
+      { day: 12, name: '名师直播课名额',  desc: '专属直播课席位1个', icon: '🎓' },
+      { day: 16, name: '实体教材一本',    desc: '精编教材包邮到家', icon: '📚' },
+      { day: 18, name: '30天VIP会员',    desc: '全站畅学一个月', icon: '👑' },
+      { day: 21, name: '神秘大礼包',      desc: '价值299元惊喜好礼', icon: '🎁' },
+    ];
+
+    const PRIZE_POOL = [
+      '7天VIP体验卡', '题库优惠券5元', '名师直播课名额',
+      '实体教材一本', '30天VIP会员', '神秘大礼包'
+    ];
+    const PRIZE_COLORS = ['#FF6B35', '#F7931E', '#FFD700', '#4CAF50', '#2196F3', '#9C27B0'];
+
+    // ============ State ============
+    let checkedDays = JSON.parse(localStorage.getItem('checkedDays') || '[]');
+    let claimedRewards = JSON.parse(localStorage.getItem('claimedRewards') || '[]');
+    let currentRewardDay = null;
+    let isSpinning = false;
+
+    // ============ Init ============
+    function init() {
+      renderCalendar();
+      renderRewards();
+      updateProgress();
+    }
+
+    // ============ Calendar ============
+    function renderCalendar() {
+      const grid = document.getElementById('calendarGrid');
+      grid.innerHTML = '';
+      for (let i = 1; i <= 21; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'day-cell';
+        const isRewardDay = REWARDS.some(r => r.day === i);
+        const isChecked = checkedDays.includes(i);
+        const nextDay = checkedDays.length > 0 ? Math.max(...checkedDays) + 1 : 1;
+        const isToday = i === nextDay && !isChecked;
+        const isLocked = i > nextDay;
+
+        if (isChecked) cell.classList.add('checked');
+        if (isToday) cell.classList.add('today');
+        if (isLocked) cell.classList.add('locked');
+        if (isRewardDay) cell.classList.add('reward-day');
+
+        cell.innerHTML = `
+          <span class="day-num">${i}</span>
+          <span class="day-label">${isRewardDay ? '奖励' : '天'}</span>
+          ${isRewardDay ? '<div class="reward-badge">🎁</div>' : ''}
+        `;
+
+        if (isToday) {
+          cell.onclick = () => handleCheckIn(i);
+        }
+        grid.appendChild(cell);
+      }
+    }
+
+    // ============ Check-in ============
+    function handleCheckIn(day) {
+      if (checkedDays.includes(day)) {
+        showToast('今天已经签到过啦！');
+        return;
+      }
+      checkedDays.push(day);
+      localStorage.setItem('checkedDays', JSON.stringify(checkedDays));
+      renderCalendar();
+      updateProgress();
+      showToast('✅ 签到成功！');
+
+      const reward = REWARDS.find(r => r.day === day);
+      if (reward && !claimedRewards.includes(day)) {
+        setTimeout(() => openLottery(reward), 800);
+      }
+    }
+
+    // ============ Progress ============
+    function updateProgress() {
+      const count = checkedDays.length;
+      document.getElementById('dayCount').textContent = count;
+      document.getElementById('progressFill').style.width = `${(count / 21) * 100}%`;
+      if (count === 0) {
+        document.getElementById('streakInfo').textContent = '点击下方日历开始你的打卡之旅！';
+      } else if (count < 7) {
+        document.getElementById('streakInfo').textContent = `已打卡${count}天，继续加油！`;
+      } else if (count < 14) {
+        document.getElementById('streakInfo').textContent = `太棒了！已坚持${count}天！`;
+      } else if (count < 21) {
+        document.getElementById('streakInfo').textContent = `离目标只差${21 - count}天了，冲！`;
+      } else {
+        document.getElementById('streakInfo').textContent = '🏆 21天全部达成！你是最棒的！';
+      }
+    }
+
+    // ============ Rewards List ============
+    function renderRewards() {
+      const list = document.getElementById('rewardList');
+      list.innerHTML = '';
+      REWARDS.forEach(r => {
+        const claimed = claimedRewards.includes(r.day);
+        const item = document.createElement('div');
+        item.className = `reward-item ${claimed ? 'claimed' : ''}`;
+        item.innerHTML = `
+          <div class="reward-icon">${r.icon}</div>
+          <div class="reward-text">
+            <h4>第${r.day}天 — ${r.name}</h4>
+            <p>${r.desc}${claimed ? ' ✅ 已领取' : ''}</p>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    // ============ Lottery Wheel ============
+    function openLottery(reward) {
+      currentRewardDay = reward.day;
+      document.getElementById('rewardDay').textContent = reward.day;
+      document.getElementById('lotteryModal').classList.add('active');
+      buildWheel();
+    }
+
+    function buildWheel() {
+      const wheel = document.getElementById('wheel');
+      wheel.innerHTML = '';
+      const segments = PRIZE_POOL.length;
+      const anglePerSegment = 360 / segments;
+
+      for (let i = 0; i < segments; i++) {
+        const seg = document.createElement('div');
+        seg.className = 'wheel-segment';
+        const startAngle = i * anglePerSegment;
+        seg.style.background = PRIZE_COLORS[i % PRIZE_COLORS.length];
+        seg.style.transform = `rotate(${startAngle}deg) skewY(${-(90 - anglePerSegment)}deg)`;
+        seg.innerHTML = `<span>${PRIZE_POOL[i]}</span>`;
+        wheel.appendChild(seg);
+      }
+    }
+
+    document.getElementById('spinBtn').onclick = function() {
+      if (isSpinning) return;
+      isSpinning = true;
+
+      const wheel = document.getElementById('wheel');
+      const segments = PRIZE_POOL.length;
+      const anglePerSegment = 360 / segments;
+      const targetIndex = Math.floor(Math.random() * segments);
+      const targetAngle = 360 - (targetIndex * anglePerSegment + anglePerSegment / 2);
+      const totalRotation = 360 * 5 + targetAngle;
+
+      wheel.style.transform = `rotate(${totalRotation}deg)`;
+
+      setTimeout(() => {
+        isSpinning = false;
+        document.getElementById('lotteryModal').classList.remove('active');
+        showPrizeResult(PRIZE_POOL[targetIndex]);
+      }, 4500);
+    };
+
+    // ============ Prize Result ============
+    function showPrizeResult(prizeName) {
+      launchConfetti();
+      document.getElementById('prizeName').textContent = prizeName;
+      const reward = REWARDS.find(r => r.name === prizeName);
+      document.getElementById('prizeDesc').textContent = reward ? reward.desc : '';
+      document.getElementById('prizeModal').classList.add('active');
+    }
+
+    function closePrizeModal() {
+      document.getElementById('prizeModal').classList.remove('active');
+    }
+
+    // ============ Form Submit ============
+    async function submitForm() {
+      const name = document.getElementById('inputName').value.trim();
+      const phone = document.getElementById('inputPhone').value.trim();
+      const address = document.getElementById('inputAddress').value.trim();
+      const prize = document.getElementById('prizeName').textContent;
+
+      if (!name || !phone || !address) {
+        showToast('请填写完整信息');
+        return;
+      }
+      if (!/^1[3-9]\d{9}$/.test(phone)) {
+        showToast('请输入正确的手机号');
+        return;
+      }
+
+      const btn = document.getElementById('submitBtn');
+      btn.textContent = '提交中...';
+      btn.disabled = true;
+
+      const record = {
+        name, phone, address, prize,
+        day: currentRewardDay,
+        timestamp: new Date().toISOString(),
+      };
+
+      // Store locally as backup
+      let submissions = JSON.parse(localStorage.getItem('submissions') || '[]');
+      submissions.push(record);
+      localStorage.setItem('submissions', JSON.stringify(submissions));
+
+      try {
+        // POST to Vercel Serverless Function
+        const res = await fetch('/api/submit-reward', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(record),
+        });
+
+        const result = await res.json();
+
+        if (!res.ok || !result.success) {
+          throw new Error(result.error || '提交失败');
+        }
+
+        // Mark reward as claimed
+        claimedRewards.push(currentRewardDay);
+        localStorage.setItem('claimedRewards', JSON.stringify(claimedRewards));
+
+        btn.textContent = '提交领取';
+        btn.disabled = false;
+        closePrizeModal();
+        renderRewards();
+        showToast('🎉 提交成功！奖品将在7个工作日内发放');
+
+      } catch (error) {
+        console.error('提交失败:', error);
+        btn.textContent = '提交领取';
+        btn.disabled = false;
+        // Data saved locally, user can retry later
+        claimedRewards.push(currentRewardDay);
+        localStorage.setItem('claimedRewards', JSON.stringify(claimedRewards));
+        closePrizeModal();
+        renderRewards();
+        showToast('已保存，网络恢复后自动同步');
+      }
+    }
+
+    // ============ Confetti Effect ============
+    function launchConfetti() {
+      const container = document.getElementById('confettiContainer');
+      const colors = ['#FF6B35', '#FFD700', '#4CAF50', '#2196F3', '#FF69B4', '#9C27B0'];
+      for (let i = 0; i < 60; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.left = Math.random() * 100 + '%';
+        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+        confetti.style.width = (Math.random() * 8 + 5) + 'px';
+        confetti.style.height = (Math.random() * 8 + 5) + 'px';
+        confetti.style.animation = `confetti-fall ${Math.random() * 2 + 2}s ease-out ${Math.random() * 0.5}s forwards`;
+        container.appendChild(confetti);
+      }
+      setTimeout(() => { container.innerHTML = ''; }, 4000);
+    }
+
+    // ============ Toast ============
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+    // ============ Start ============
+    init();
+  </script>
+</body>
+</html>
